@@ -1,31 +1,84 @@
 'use client';
-import { OnchainKitProvider } from '@coinbase/onchainkit';
-import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
-import { base } from 'viem/chains';
+
 import { WagmiProvider } from 'wagmi';
-import { NEXT_PUBLIC_CDP_API_KEY } from '../config';
-import { useWagmiConfig } from '../wagmi';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
+import { SolanaAdapter } from '@reown/appkit-adapter-solana';
+import { createAppKit } from '@reown/appkit/react';
+import { useEffect, useState } from 'react';
+import { 
+  solana, 
+  mainnet, 
+  arbitrum, 
+  polygon,
+  optimism,
+  base
+} from '@reown/appkit/networks';
+import { SolflareWalletAdapter, PhantomWalletAdapter } from '@solana/wallet-adapter-wallets';
+import React from 'react';
 
-type Props = { children: ReactNode };
-
+// Create QueryClient
 const queryClient = new QueryClient();
 
-function OnchainProviders({ children }: Props) {
-  const wagmiConfig = useWagmiConfig();
+// Define supported networks
+const networks = [
+  mainnet,
+  arbitrum,
+  polygon,
+  optimism,
+  base,
+  solana
+];
+
+// Create Wagmi Adapter
+const wagmiAdapter = new WagmiAdapter({
+  networks,
+  projectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID || '',
+  ssr: true,
+});
+
+// Create Solana adapter
+const solanaAdapter = new SolanaAdapter({
+  wallets: [new PhantomWalletAdapter(), new SolflareWalletAdapter()]
+});
+
+export default function OnchainProviders({ children }: { children: React.ReactNode }): JSX.Element {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const metadata = {
+        name: 'Chainable Guru',
+        description: 'Cross-Chain DeFi Platform',
+        url: process.env.NEXT_PUBLIC_ENVIRONMENT || '',
+        icons: ['https://avatars.githubusercontent.com/u/179229932']
+      };
+
+      // Initialize AppKit with both adapters
+      createAppKit({
+        adapters: [wagmiAdapter, solanaAdapter],
+        networks,
+        projectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID || '',
+        metadata,
+        features: {
+          onramp: true,
+          swaps: true
+        }
+      });
+      
+      setMounted(true);
+    }
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
-    <WagmiProvider config={wagmiConfig}>
+    <WagmiProvider config={wagmiAdapter.wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <OnchainKitProvider apiKey={NEXT_PUBLIC_CDP_API_KEY} chain={base}>
-          <RainbowKitProvider modalSize="compact">
-            {children}
-          </RainbowKitProvider>
-        </OnchainKitProvider>
+        {children}
       </QueryClientProvider>
     </WagmiProvider>
   );
 }
-
-export default OnchainProviders;
