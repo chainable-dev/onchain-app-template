@@ -42,7 +42,7 @@ const solanaAdapter = new SolanaAdapter({
   wallets: [new PhantomWalletAdapter(), new SolflareWalletAdapter()]
 });
 
-export default function OnchainProviders({ children }: { children: React.ReactNode }) {
+export default function Providers({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -81,4 +81,4 @@ export default function OnchainProviders({ children }: { children: React.ReactNo
       </QueryClientProvider>
     </WagmiProvider>
   );
-}
+} 
